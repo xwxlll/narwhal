@@ -9,11 +9,12 @@ use log::debug;
 use log::info;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::{sleep, Duration, Instant};
+use std::sync::atomic::{AtomicUsize,Ordering};
 
 #[cfg(test)]
 #[path = "tests/proposer_tests.rs"]
 pub mod proposer_tests;
-
+static created_count: AtomicUsize  = AtomicUsize::new(0);
 /// The proposer creates new headers and send them to the core for broadcasting and further processing.
 pub struct Proposer {
     /// The public key of this primary.
@@ -88,8 +89,11 @@ impl Proposer {
             &mut self.signature_service,
         )
         .await;
-        debug!("Created {:?}", header);
-
+        
+        debug!("Created Block {:?}!!! of the round{:?} ", header, &header.round);
+        created_count.fetch_add(1,Ordering::Relaxed);
+        debug!("the created header count of this protocol is:{:?}!!!!!~~~~~~~~~~~~~~~",&created_count);
+        
         #[cfg(feature = "benchmark")]
         for digest in header.payload.keys() {
             // NOTE: This log entry is used to compute performance.
