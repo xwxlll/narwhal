@@ -7,11 +7,12 @@ use primary::{Certificate, Round};
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc::{Receiver, Sender};
-
+use std::sync::atomic::{AtomicUsize, Ordering};
 #[cfg(test)]
 #[path = "tests/consensus_tests.rs"]
 pub mod consensus_tests;
 
+static block_count: AtomicUsize  = AtomicUsize::new(0);
 /// The representation of the DAG in memory.
 type Dag = HashMap<Round, HashMap<PublicKey, (Digest, Certificate)>>;
 
@@ -51,6 +52,8 @@ impl State {
         let last_committed_round = *self.last_committed.values().max().unwrap();
         self.last_committed_round = last_committed_round;
 
+        // TODO: This cleanup is dangerous: we need to ensure consensus can receive idempotent replies
+        // from the primary. Here we risk cleaning up a certificate and receiving it again later.
         for (name, round) in &self.last_committed {
             self.dag.retain(|r, authorities| {
                 authorities.retain(|n, _| n != name || r >= round);
@@ -185,7 +188,9 @@ impl Consensus {
                     // NOTE: This log entry is used to compute performance.
                     info!("Committed {} -> {:?}", certificate.header, digest);
                 }
-
+                
+                block_count.fetch_add(1,Ordering::Relaxed);
+                debug!(" the count of block is {:?}=====",&block_count);
                 self.tx_primary
                     .send(certificate.clone())
                     .await
@@ -222,7 +227,7 @@ impl Consensus {
     fn order_leaders(&self, leader: &Certificate, state: &State) -> Vec<Certificate> {
         let mut to_commit = vec![leader.clone()];
         let mut leader = leader;
-        for r in (state.last_committed_round + 2..leader.round())
+        for r in (state.last_committed_round + 2..=leader.round() - 2)
             .rev()
             .step_by(2)
         {
