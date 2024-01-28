@@ -14,8 +14,8 @@ from benchmark.config import Committee, Key, NodeParameters, BenchParameters, Co
 from benchmark.utils import BenchError, Print, PathMaker, progress_bar
 from benchmark.commands import CommandMaker
 from benchmark.logs import LogParser, ParseError
-from benchmark.instance import InstanceManager
-
+# from benchmark.instance import InstanceManager
+from benchmark.myinstance import InstanceManager
 
 class FabricError(Exception):
     ''' Wrapper for Fabric exception with a meaningfull error message. '''
@@ -32,14 +32,17 @@ class ExecutionError(Exception):
 
 class Bench:
     def __init__(self, ctx):
-        self.manager = InstanceManager.make()
+         #利用InstanceManager管理初始化, InstanceManager是一个管理实例的类，它可能包含一些方法和属性来管理和操作实例。
+        self.manager = InstanceManager.make()          # 创建一个InstanceManager实例并将其赋值给self.manager。
         self.settings = self.manager.settings
         try:
+            # 尝试加载SSH密钥文件并将其设置为连接参数。它使用`RSAKey`类从私钥文件中加载密钥，私钥文件的路径存储在`self.manager.settings.key_path`中。
             ctx.connect_kwargs.pkey = RSAKey.from_private_key_file(
                 self.manager.settings.key_path
             )
             self.connect = ctx.connect_kwargs
         except (IOError, PasswordRequiredException, SSHException) as e:
+            # 如果在加载SSH密钥文件时出现`IOError`、`PasswordRequiredException`或`SSHException`异常，将抛出`BenchError`异常，并将原始异常`e`作为其参数。
             raise BenchError('Failed to load SSH key', e)
 
     def _check_stderr(self, output):
@@ -94,6 +97,8 @@ class Bench:
         except GroupException as e:
             raise BenchError('Failed to kill nodes', FabricError(e))
 
+# select_hosts 根据给定的基准测试参数选择主机。如果参数中设置了`collocate`为True，-----------------------------------------------------
+# 则将主节点和其工作节点放置在同一台主机上；否则，每个主机上分别运行一个主节点和其工作节点。------------------------------------------------------
     def _select_hosts(self, bench_parameters):
         # Collocate the primary and its workers on the same machine.
         if bench_parameters.collocate:
@@ -128,13 +133,14 @@ class Bench:
                 ips = list(hosts[region])[:bench_parameters.workers + 1]
                 selected.append(ips)
             return selected
-
+#`_background_run`函数用于在后台运行给定的命令，并将命令的输出保存到日志文件中。
     def _background_run(self, host, command, log_file):
         name = splitext(basename(log_file))[0]
         cmd = f'tmux new -d -s "{name}" "{command} |& tee {log_file}"'
         c = Connection(host, user='ubuntu', connect_kwargs=self.connect)
         output = c.run(cmd, hide=True)
-        self._check_stderr(output)
+        self._check_stderr(output)  # 调用`self._check_stderr(output)`函数检查命令的输出是否有错误。如果`output`是一个字典，则遍历字典的值，
+
 
     def _update(self, hosts, collocate):
         if collocate:
