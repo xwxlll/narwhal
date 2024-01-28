@@ -3,6 +3,9 @@ from os.path import join
 
 from benchmark.utils import PathMaker
 
+import os
+
+
 
 class CommandMaker:
 
@@ -11,10 +14,43 @@ class CommandMaker:
         return (
             f'rm -r .db-* ; rm .*.json ; mkdir -p {PathMaker.results_path()}'
         )
+    
+    # @staticmethod
+    # def clean_logs():
+    #     # 获取日志目录路径
+    #     logs_path = PathMaker.logs_path()
 
+    #     # 构建目标目录的路径
+    #     target_dir = 'data'
+    #     target_path = os.path.join(os.getcwd(), target_dir)
+
+    #     # 构建新的日志目录路径
+    #     new_logs_path = f'{logs_path}_backup'
+
+    #     # 构建移动日志目录的命令
+    #     move_command = f'mv {logs_path} {target_path}'
+
+    #     # 构建重命名日志目录的命令
+    #     rename_command = f'mv {target_path}/{os.path.basename(logs_path)} {new_logs_path}'
+
+    #     mk_command = f'mkdir -p {PathMaker.logs_path()}'
+    #     # 返回移动和重命名日志目录的命令
+    #     return f'{move_command} && {rename_command}&& {mk_command}'
+    
     @staticmethod
     def clean_logs():
-        return f'rm -r {PathMaker.logs_path()} ; mkdir -p {PathMaker.logs_path()}'
+        # 获取日志目录路径
+        logs_path = PathMaker.logs_path()
+
+        # 构建目标目录的路径
+        target_path = 'data'
+        num=1111111
+        new_logs_path = 'data/log'+str(num)
+        # 返回移动日志目录的命令
+        return f'mkdir {new_logs_path}; mv {logs_path} {new_logs_path};rm -r {PathMaker.logs_path()}; mkdir -p {PathMaker.logs_path()}'
+    # @staticmethod
+    # def clean_logs():
+    #     return f'rm -r {PathMaker.logs_path()} ; mkdir -p {PathMaker.logs_path()}'
 
     @staticmethod
     def compile():
